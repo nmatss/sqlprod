@@ -1,36 +1,150 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# SQL Server Monitoring Dashboard
 
-## Getting Started
+Real-time monitoring dashboard for SQL Server instances built with Next.js 15, TypeScript, Tailwind CSS, and Recharts.
 
-First, run the development server:
+![Next.js](https://img.shields.io/badge/Next.js-16-black)
+![TypeScript](https://img.shields.io/badge/TypeScript-5-blue)
+![License](https://img.shields.io/badge/License-MIT-green)
+
+## Features
+
+- **Overview** - CPU, memory, active sessions, blocked processes, running jobs at a glance
+- **Agent Jobs** - Job list, status, run history with duration chart, failed job alerts
+- **Active Executions** - Running queries, top expensive queries from plan cache
+- **Locks & Blocking** - Blocking chain visualization, head blocker identification, lock waits
+- **Performance** - CPU history chart, wait statistics, I/O latency, missing index recommendations
+- **Sessions & Users** - Active sessions, summary by login/host
+- **Database Health** - Database size, backup status, file growth, log space usage
+
+### Highlights
+
+- Dual server monitoring (switch between servers or view both)
+- Auto-refresh every 30 seconds (pause/resume)
+- Color-coded alerts (green/yellow/red thresholds)
+- Dark theme UI
+- Resilient connections (`Promise.allSettled` - one server down doesn't break the other)
+
+## Tech Stack
+
+| Layer | Technology |
+|-------|-----------|
+| Framework | Next.js 16 (App Router) |
+| Language | TypeScript |
+| Styling | Tailwind CSS 4 |
+| Charts | Recharts |
+| Icons | Lucide React |
+| Database | mssql (node-mssql) |
+| Deployment | Docker |
+
+## Prerequisites
+
+- Node.js 20+
+- Access to SQL Server instances with `VIEW SERVER STATE` permission and `msdb` read access
+- Docker (for production deployment)
+
+## Quick Start
+
+### 1. Clone and install
+
+```bash
+git clone https://github.com/nmatss/sqlprod.git
+cd sqlprod
+npm install
+```
+
+### 2. Configure environment
+
+```bash
+cp .env.example .env.local
+# Edit .env.local with your SQL Server credentials
+```
+
+### 3. Run development server
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000)
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Docker Deployment
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### Build and run
 
-## Learn More
+```bash
+docker compose up -d --build
+```
 
-To learn more about Next.js, take a look at the following resources:
+The dashboard will be available on port `3090`.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### Environment variables
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Configure in `docker-compose.yml` or pass via `-e` flags:
 
-## Deploy on Vercel
+| Variable | Description |
+|----------|-------------|
+| `DB01_HOST` | SQL Server 1 hostname |
+| `DB01_PORT` | SQL Server 1 port (default: 1433) |
+| `DB01_DATABASE` | Database name on server 1 |
+| `DB02_HOST` | SQL Server 2 hostname |
+| `DB02_PORT` | SQL Server 2 port (default: 1433) |
+| `DB02_DATABASE` | Database name on server 2 |
+| `DB_USER` | SQL Server login |
+| `DB_PASSWORD` | SQL Server password |
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Project Structure
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```
+src/
+├── app/
+│   ├── api/monitor/          # 7 API routes (overview, jobs, executions, locks, performance, sessions, health)
+│   ├── dashboard/            # 7 dashboard pages + layout shell
+│   ├── layout.tsx            # Root layout
+│   └── page.tsx              # Redirect to /dashboard
+├── components/
+│   ├── charts/               # CpuChart, WaitStatsChart, JobHistoryChart, GaugeChart
+│   ├── layout/               # Sidebar, Topbar
+│   ├── providers/            # ServerContext, RefreshContext
+│   └── ui/                   # Card, StatusBadge, DataTable, LoadingSkeleton, ErrorAlert
+├── hooks/
+│   └── useMonitorData.ts     # Central polling hook (30s auto-refresh)
+└── lib/
+    ├── db.ts                 # Dual connection pool with globalThis persistence
+    ├── types.ts              # TypeScript interfaces
+    ├── utils.ts              # Formatting helpers
+    └── queries/              # SQL DMV queries (jobs, executions, locks, performance, sessions, health)
+```
+
+## SQL Server Permissions
+
+The monitoring user requires:
+
+```sql
+-- Server-level
+GRANT VIEW SERVER STATE TO [your_user];
+
+-- msdb access (for Agent Jobs)
+USE msdb;
+GRANT SELECT ON dbo.sysjobs TO [your_user];
+GRANT SELECT ON dbo.sysjobhistory TO [your_user];
+GRANT SELECT ON dbo.sysjobactivity TO [your_user];
+GRANT SELECT ON dbo.syssessions TO [your_user];
+GRANT SELECT ON dbo.sysjobschedules TO [your_user];
+GRANT SELECT ON dbo.syscategories TO [your_user];
+GRANT SELECT ON dbo.backupset TO [your_user];
+```
+
+## Alert Thresholds
+
+| Metric | Green | Yellow | Red |
+|--------|-------|--------|-----|
+| CPU | < 60% | 60-85% | > 85% |
+| PLE (Page Life Expectancy) | > 300s | 150-300s | < 150s |
+| Buffer Cache Hit Ratio | > 95% | 90-95% | < 90% |
+| Backup Age | < 24h | 24-48h | > 48h |
+| I/O Read Latency | < 10ms | 10-20ms | > 20ms |
+| Blocking | 0 | - | > 0 |
+
+## License
+
+MIT

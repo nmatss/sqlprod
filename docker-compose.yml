@@ -1,0 +1,17 @@
+services:
+  monitoriasql:
+    build: .
+    container_name: monitoriasql
+    restart: unless-stopped
+    ports:
+      - "3090:3000"
+    environment:
+      - DB01_HOST=${DB01_HOST}
+      - DB01_PORT=${DB01_PORT:-1433}
+      - DB01_DATABASE=${DB01_DATABASE}
+      - DB02_HOST=${DB02_HOST}
+      - DB02_PORT=${DB02_PORT:-1433}
+      - DB02_DATABASE=${DB02_DATABASE}
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - NODE_ENV=production
