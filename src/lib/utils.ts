@@ -6,22 +6,42 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 export function formatBytes(mb: number): string {
+  if (mb >= 1_048_576) return `${(mb / 1_048_576).toFixed(1)} TB`;
   if (mb >= 1024) return `${(mb / 1024).toFixed(1)} GB`;
-  return `${mb.toFixed(1)} MB`;
+  if (mb >= 1) return `${mb.toFixed(1)} MB`;
+  return `${(mb * 1024).toFixed(0)} KB`;
 }
 
 export function formatDuration(seconds: number): string {
+  if (seconds < 0) seconds = 0;
   if (seconds < 60) return `${seconds}s`;
   if (seconds < 3600) return `${Math.floor(seconds / 60)}m ${seconds % 60}s`;
-  const h = Math.floor(seconds / 3600);
+  const d = Math.floor(seconds / 86400);
+  const h = Math.floor((seconds % 86400) / 3600);
   const m = Math.floor((seconds % 3600) / 60);
+  if (d > 0) return `${d}d ${h}h`;
   return `${h}h ${m}m`;
 }
 
-export function formatNumber(n: number): string {
-  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
-  if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`;
-  return n.toString();
+export function formatNumber(n: number | string | null | undefined): string {
+  if (n === null || n === undefined) return '0';
+  const num = typeof n === 'string' ? parseFloat(n) : n;
+  if (isNaN(num)) return '0';
+  if (num >= 1_000_000_000) return `${(num / 1_000_000_000).toFixed(1)}B`;
+  if (num >= 1_000_000) return `${(num / 1_000_000).toFixed(1)}M`;
+  if (num >= 10_000) return `${(num / 1_000).toFixed(1)}K`;
+  if (num >= 1_000) return num.toLocaleString('en-US');
+  return num.toString();
+}
+
+export function formatCompact(n: number | string | null | undefined): string {
+  if (n === null || n === undefined) return '0';
+  const num = typeof n === 'string' ? parseFloat(n) : n;
+  if (isNaN(num)) return '0';
+  if (num >= 1_000_000_000) return `${(num / 1_000_000_000).toFixed(2)}B`;
+  if (num >= 1_000_000) return `${(num / 1_000_000).toFixed(2)}M`;
+  if (num >= 1_000) return `${(num / 1_000).toFixed(1)}K`;
+  return num.toString();
 }
 
 export function truncateSql(sql: string, maxLen = 200): string {
@@ -32,6 +52,7 @@ export function truncateSql(sql: string, maxLen = 200): string {
 }
 
 export function statusColor(status: string): 'green' | 'yellow' | 'red' | 'gray' {
+  if (!status) return 'gray';
   switch (status.toLowerCase()) {
     case 'succeeded':
     case 'running':
